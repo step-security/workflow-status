@@ -1,0 +1,66 @@
+name: "Workflow Status Action"
+description: "Trigger events like notifications or alerts using the workflow status"
+author: "step-security"
+
+outputs:
+  status:
+    description: "Returns either success or failed as workflow status"
+    value: ${{ steps.workflow-status.outputs.status }}
+runs:
+  using: "composite"
+  steps:
+     - name: Subscription check
+       run: |
+          # validate subscription status
+          API_URL="https://agent.api.stepsecurity.io/v1/github/$GITHUB_REPOSITORY/actions/subscription"
+
+          # Set a timeout for the curl command (3 seconds)
+          RESPONSE=$(curl --max-time 3 -s -w "%{http_code}" "$API_URL" -o /dev/null) || true
+          CURL_EXIT_CODE=${?}
+
+          # Decide based on curl exit code and HTTP status
+          if [ $CURL_EXIT_CODE -ne 0 ]; then
+            # Network/timeout error
+            echo "Timeout or API not reachable. Continuing to next step."
+          elif [ "$RESPONSE" = "200" ]; then
+            # OK
+            :
+          elif [ "$RESPONSE" = "403" ]; then
+            # Only 403 blocks the workflow
+            echo "Subscription is not valid. Reach out to support@stepsecurity.io"
+            exit 1
+          else
+            # Any other HTTP code: treat as transient/unreachable
+            echo "Timeout or API not reachable. Continuing to next step."
+          fi
+       shell: bash
+
+     - name: Check status
+       id: workflow-status
+       run: |
+        url="${GITHUB_API_URL}/repos"
+        repo="${GITHUB_REPOSITORY}"
+        run_id="${GITHUB_RUN_ID}"
+        token="${{ github.token }}"
+
+        failure=$(curl -s -H "Authorization: token ${token}" "${url}/${repo}/actions/runs/${run_id}/jobs?per_page=100" | \
+        jq -r '.jobs[] | select(.status == "completed" and .conclusion == "failure").conclusion' | \
+        wc -l)
+
+        cancelled=$(curl -s -H "Authorization: token ${token}" "${url}/${repo}/actions/runs/${run_id}/jobs?per_page=100" | \
+        jq -r '.jobs[] | select(.status == "completed" and .conclusion == "cancelled").conclusion' | \
+        wc -l)
+
+        if [ "${failure}" -gt 0 ]; then
+          status="failure"
+        elif [ "${cancelled}" -gt 0 ]; then
+          status="cancelled"
+        else 
+          status="success"
+        fi
+
+        echo "status=${status}" >> $GITHUB_OUTPUT
+       shell: bash
+branding:
+  icon: check-square
+  color: gray-dark
