@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Unit Tests
         run: go test ./...
 
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build
         run: docker build -t example:latest .
 
@@ -77,7 +77,7 @@ jobs:
     needs: [build]
     if: always()
     steps:
-      - uses: step-security/workflow-status@v3
+      - uses: step-security/workflow-status@v4
         id: check
       - uses: 8398a7/action-slack@v3
         with:
