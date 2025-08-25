@@ -26,7 +26,7 @@ Simply add a job to the end of your workflow and list the last job as dependency
     needs: [build]
     if: always()
     steps:
-      - uses: step-security/workflow-status@v3
+      - uses: step-security/workflow-status@v4
         id: check
       - run: echo "Workflow failed"
         if: steps.check.outputs.status == 'failure'
