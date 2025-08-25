@@ -1,0 +1,34 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'license'
+      - '**.md'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'license'
+      - '**.md'
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+
+  test:
+    name: Test-Action
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Test Action
+        id: test
+        uses: ./
+      - name: Get Test Output
+        run: echo "Workflow Status '${{ steps.test.outputs.status }}'"
